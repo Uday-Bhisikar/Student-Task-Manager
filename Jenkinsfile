@@ -10,21 +10,37 @@ pipeline {
 
         stage('Build Backend') {
             steps {
-                sh '''
-                    docker build -t $DOCKER_USER/student-task-manager-backend:$BUILD_NUMBER ./backend
-                '''
+                sh 'docker build -t $DOCKER_USER/student-task-manager-backend:$BUILD_NUMBER ./backend'
             }
         }
 
         stage('Build Frontend') {
             steps {
+                sh 'docker build -t $DOCKER_USER/student-task-manager-frontend:$BUILD_NUMBER ./frontend'
+            }
+        }
+
+        stage('Trivy Security Scan') {
+            steps {
                 sh '''
-                    docker build -t $DOCKER_USER/student-task-manager-frontend:$BUILD_NUMBER ./frontend
+                    docker run --rm \
+                    -v /var/run/docker.sock:/var/run/docker.sock \
+                    aquasec/trivy:latest image \
+                    --severity HIGH,CRITICAL \
+                    --exit-code 0 \
+                    $DOCKER_USER/student-task-manager-backend:$BUILD_NUMBER
+
+                    docker run --rm \
+                    -v /var/run/docker.sock:/var/run/docker.sock \
+                    aquasec/trivy:latest image \
+                    --severity HIGH,CRITICAL \
+                    --exit-code 0 \
+                    $DOCKER_USER/student-task-manager-frontend:$BUILD_NUMBER
                 '''
             }
         }
 
-        stage('Docker Hub Login & Push') {
+        stage('Docker Hub Push') {
             steps {
                 withCredentials([usernamePassword(
                     credentialsId: 'docker-hub-cred',

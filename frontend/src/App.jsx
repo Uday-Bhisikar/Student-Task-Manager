@@ -2,7 +2,7 @@
 import { useState, useEffect } from "react";
 import "./App.css";
 
-const API = "http://localhost:5002/api/tasks";
+const API = "http://localhost:30002/api/tasks";
 
 function App() {
   const [tasks, setTasks] = useState([]);

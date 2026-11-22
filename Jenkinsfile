@@ -2,28 +2,44 @@
 pipeline {
     agent any
 
+    environment {
+        DOCKER_USER = 'uday1002'
+    }
+
     stages {
-        stage('Checkout') {
-            steps {
-                echo 'Student Task Manager CI Pipeline Started'
-            }
-        }
 
         stage('Build Backend') {
             steps {
-                sh 'docker build -t student-task-manager-backend:v1 ./backend'
+                sh '''
+                    docker build -t $DOCKER_USER/student-task-manager-backend:$BUILD_NUMBER ./backend
+                '''
             }
         }
 
         stage('Build Frontend') {
             steps {
-                sh 'docker build -t student-task-manager-frontend:v1 ./frontend'
+                sh '''
+                    docker build -t $DOCKER_USER/student-task-manager-frontend:$BUILD_NUMBER ./frontend
+                '''
             }
         }
 
-        stage('Verify Images') {
+        stage('Docker Hub Login & Push') {
             steps {
-                sh 'docker images'
+                withCredentials([usernamePassword(
+                    credentialsId: 'docker-hub-cred',
+                    usernameVariable: 'DOCKERHUB_USER',
+                    passwordVariable: 'DOCKERHUB_TOKEN'
+                )]) {
+                    sh '''
+                        printf '%s' "$DOCKERHUB_TOKEN" | docker login -u "$DOCKERHUB_USER" --password-stdin
+
+                        docker push $DOCKER_USER/student-task-manager-backend:$BUILD_NUMBER
+                        docker push $DOCKER_USER/student-task-manager-frontend:$BUILD_NUMBER
+
+                        docker logout
+                    '''
+                }
             }
         }
     }
